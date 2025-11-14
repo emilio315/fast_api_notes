@@ -5,7 +5,7 @@ from models import ToDoTask
 from database import SessionLocal
 from sqlalchemy.orm import Session
 from starlette import status
-
+from .auth import get_current_user
 
 router = APIRouter()
 
@@ -34,6 +34,8 @@ def get_db():
         db.close()
 
 db_dependency = Annotated[Session, Depends(get_db)]
+user_dependency = Annotated[dict, Depends(get_current_user)]
+
 
 @router.get("/")
 async def read_all_task(db: db_dependency):
@@ -47,8 +49,11 @@ async def read_todo(db: db_dependency,todo_id:int = Path(gt=0)):
         raise HTTPException(404, detail='Item not found')
 
 @router.post("/create-todo", status_code=status.HTTP_201_CREATED)
-async def create_todo(db: db_dependency ,todo_request:ToDoRequest):
-    new_todo = ToDoTask(**todo_request.model_dump())
+async def create_todo(user:user_dependency,db: db_dependency ,todo_request:ToDoRequest):
+    if user is None:
+        raise HTTPException(status_code=401,detail="Authentication failed")
+    new_todo = ToDoTask(**todo_request.model_dump(),
+                        user=user.id)
     db.add(new_todo)
     db.commit()
 
