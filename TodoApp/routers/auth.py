@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import Depends, HTTPException, APIRouter
+from fastapi import Depends, HTTPException, APIRouter, Path
 from pydantic import BaseModel, Field
 from models import User
 from database import SessionLocal
@@ -29,6 +29,7 @@ class UserRequest(BaseModel):
     last_name:str = Field(min_length=1, max_length=50)
     hashed_password:str = Field(min_length=8)
     role:str = Field(min_length=3)
+    phone_number:str = Field(min_length=3)
 
     model_config = {
         "json_schema_extra":{
@@ -38,7 +39,20 @@ class UserRequest(BaseModel):
                 "first_name":"Carlos",
                 "last_name":"Zavala",
                 "hashed_password":"Password#",
-                "role":"usuario"
+                "role":"usuario",
+                "phone_number":"4433161903"
+
+            }
+        }
+    }
+
+class UpdateUserRequest(BaseModel):
+    phone_number:str = Field(min_length=3)
+
+    model_config = {
+        "json_schema_extra":{
+            "example":{
+                "phone_number":"4433161903"
 
             }
         }
@@ -94,9 +108,30 @@ async def create_user(db: db_dependency ,user_request:UserRequest):
         last_name=user_request.last_name,
         hashed_password=bcrypt_contex.hash(user_request.hashed_password),
         is_active=True,
-        role=user_request.role
+        role=user_request.role,
+        phone_number = user_request.phone_number
     )
     db.add(new_user)
+    db.commit()
+
+@router.put("/user/update/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def update_user(
+                      db: db_dependency ,
+                      user_request:UpdateUserRequest,
+                      user_id:int  = Path(gt=0)
+                      ):
+
+    user_model = db.query(User).filter(User.id == user_id).first()
+    if user_model is None:
+        raise HTTPException(404, detail='Item not found')
+
+    # user_model.email = user_request.email
+    # user_model.first_name = user_request.first_name
+    # user_model.last_name = user_request.last_name
+    user_model.phone_number = user_request.phone_number
+    # user_model.role = user_request.role
+
+    db.add(user_model)
     db.commit()
 
 

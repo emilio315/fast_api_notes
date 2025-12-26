@@ -41,14 +41,14 @@ user_dependency = Annotated[dict, Depends(get_current_user)]
 async def read_all_task(user:user_dependency,db: db_dependency):
     if user is None:
         raise HTTPException(status_code=401,detail="Authentication failed")
-    return db.query(ToDoTask).filter(ToDoTask.user == user.get('id')).all()
+    return db.query(ToDoTask).filter(ToDoTask.owner_id == user.get('id')).all()
 
 @router.get("/todo/{todo_id}/",status_code=status.HTTP_200_OK)
 async def read_todo(user:user_dependency,db: db_dependency,todo_id:int = Path(gt=0)):
     try:
         if user is None:
             raise HTTPException(status_code=401,detail="Authentication failed")
-        return db.query(ToDoTask).filter(ToDoTask.id == todo_id).filter(ToDoTask.user == user.get('id')).first()
+        return db.query(ToDoTask).filter(ToDoTask.id == todo_id).filter(ToDoTask.owner_id == user.get('id')).first()
     except:
         raise HTTPException(404, detail='Item not found')
 
@@ -59,7 +59,7 @@ async def create_todo(user:user_dependency,
     if user is None:
         raise HTTPException(status_code=401,detail="Authentication failed")
     new_todo = ToDoTask(**todo_request.model_dump(),
-                        user=user.get('id'))
+                        owner_id=user.get('id'))
     db.add(new_todo)
     db.commit()
 
@@ -72,7 +72,7 @@ async def update_todo(user:user_dependency,
                       ):
     if user is None:
         raise HTTPException(status_code=401,detail="Authentication failed")
-    todo_model = db.query(ToDoTask).filter(ToDoTask.id == todo_id).filter(ToDoTask.user == user.get('id')).first()
+    todo_model = db.query(ToDoTask).filter(ToDoTask.id == todo_id).filter(ToDoTask.owner_id == user.get('id')).first()
     if todo_model is None:
         raise HTTPException(404, detail='Item not found')
 
@@ -92,7 +92,7 @@ async def delete_todo(user:user_dependency,
     if user is None:
         raise HTTPException(status_code=401,detail="Authentication failed")
 
-    todo_model = db.query(ToDoTask).filter(ToDoTask.id == todo_id).filter(ToDoTask.user == user.get('id')).first()
+    todo_model = db.query(ToDoTask).filter(ToDoTask.id == todo_id).filter(ToDoTask.owner_id == user.get('id')).first()
     if todo_model is None:
         raise HTTPException(404, detail='Item not found')
 
