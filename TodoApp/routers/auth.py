@@ -1,8 +1,8 @@
 from typing import Annotated
 from fastapi import Depends, HTTPException, APIRouter, Path
 from pydantic import BaseModel, Field
-from models import User
-from database import SessionLocal
+from ..models import User
+from ..database import SessionLocal
 from sqlalchemy.orm import Session
 from starlette import status
 from passlib.context import CryptContext
