@@ -7,7 +7,11 @@ from sqlalchemy.orm import Session
 from starlette import status
 from .auth import get_current_user
 
-router = APIRouter()
+
+router = APIRouter(
+    prefix='/todo',
+    tags=['todo']
+)
 
 class ToDoRequest(BaseModel):
     title:str = Field(min_length=3)
@@ -37,22 +41,22 @@ db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
 
-@router.get("/", status_code=status.HTTP_200_OK)
+@router.get("/all", status_code=status.HTTP_200_OK)
 async def read_all_task(user:user_dependency,db: db_dependency):
     if user is None:
         raise HTTPException(status_code=401,detail="Authentication failed")
     return db.query(ToDoTask).filter(ToDoTask.owner_id == user.get('id')).all()
 
-@router.get("/todo/{todo_id}/",status_code=status.HTTP_200_OK)
+@router.get("/get/{todo_id}/",status_code=status.HTTP_200_OK)
 async def read_todo(user:user_dependency,db: db_dependency,todo_id:int = Path(gt=0)):
-    try:
-        if user is None:
-            raise HTTPException(status_code=401,detail="Authentication failed")
-        return db.query(ToDoTask).filter(ToDoTask.id == todo_id).filter(ToDoTask.owner_id == user.get('id')).first()
-    except:
+    if user is None:
+        raise HTTPException(status_code=401,detail="Authentication failed")
+    todo_result =  db.query(ToDoTask).filter(ToDoTask.id == todo_id).filter(ToDoTask.owner_id == user.get('id')).first()
+    if todo_result is None:
         raise HTTPException(404, detail='Item not found')
+    return todo_result        
 
-@router.post("/create-todo", status_code=status.HTTP_201_CREATED)
+@router.post("/create", status_code=status.HTTP_201_CREATED)
 async def create_todo(user:user_dependency,
                       db: db_dependency ,
                       todo_request:ToDoRequest):
@@ -64,7 +68,7 @@ async def create_todo(user:user_dependency,
     db.commit()
 
 
-@router.put("/todo/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.put("/edit/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def update_todo(user:user_dependency,
                       db: db_dependency ,
                       todo_request:ToDoRequest,
@@ -84,7 +88,7 @@ async def update_todo(user:user_dependency,
     db.add(todo_model)
     db.commit()
 
-@router.delete("/todo/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/delete/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_todo(user:user_dependency,
                       db: db_dependency ,
                       todo_id:int  = Path(gt=0)
